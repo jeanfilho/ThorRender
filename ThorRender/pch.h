@@ -41,6 +41,7 @@
 
 #include <DirectXMath.h>
 #include <DirectXColors.h>
+#include <DirectXMesh.h>
 
 #include <algorithm>
 #include <exception>
