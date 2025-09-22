@@ -13,11 +13,12 @@
 
 using namespace Microsoft::WRL;
 
-constexpr UINT Width = 800;
-constexpr UINT Height = 600;
 constexpr UINT FrameCount = 2;
 
 // Globals
+UINT g_Width = 800;
+UINT g_Height = 600;
+
 HWND g_hwnd = nullptr;
 ComPtr<ID3D12Device> g_device;
 ComPtr<IDXGISwapChain3> g_swapChain;
@@ -50,12 +51,24 @@ void InitD3D12();
 void PopulateCommandList();
 void WaitForPreviousFrame();
 void Render();
+void ResizeScreen();
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    if (message == WM_DESTROY) {
+
+    // Alt+Enter fullscreen toggle
+    switch(message)
+    {
+    case WM_SIZE:
+        g_Width = LOWORD(lParam);
+        g_Height = HIWORD(lParam);
+        ResizeScreen();
+        return 0;
+    case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
+    default:
+        break;
     }
     return DefWindowProc(hWnd, message, wParam, lParam);
 }
@@ -73,11 +86,38 @@ void InitWindow(HINSTANCE hInstance, int nCmdShow)
         wc.lpszClassName,
         "DirectX 12 Template",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, Width, Height,
+        CW_USEDEFAULT, CW_USEDEFAULT, g_Width, g_Height,
         nullptr, nullptr, hInstance, nullptr
     );
 
     ShowWindow(g_hwnd, nCmdShow);
+}
+
+void ResizeScreen()
+{
+    if (!g_swapChain) return;
+
+    // Wait until all previous GPU work is complete
+    WaitForPreviousFrame();
+
+    // Reset render targets to recreate them
+    for (UINT i = 0; i < FrameCount; ++i)
+        g_renderTargets[i].Reset();
+
+    DXGI_SWAP_CHAIN_DESC1 desc = {};
+    g_swapChain->GetDesc1(&desc);
+    g_swapChain->ResizeBuffers(FrameCount, g_Width, g_Height, desc.Format, desc.Flags);
+
+    g_frameIndex = g_swapChain->GetCurrentBackBufferIndex();
+
+    // Recreate render target views
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(g_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+    for (UINT i = 0; i < FrameCount; ++i)
+    {
+        g_swapChain->GetBuffer(i, IID_PPV_ARGS(&g_renderTargets[i]));
+        g_device->CreateRenderTargetView(g_renderTargets[i].Get(), nullptr, rtvHandle);
+        rtvHandle.Offset(1, g_rtvDescriptorSize);
+    }
 }
 
 void InitD3D12()
@@ -103,12 +143,13 @@ void InitD3D12()
     // Swap chain
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = Width;
-    swapChainDesc.Height = Height;
+    swapChainDesc.Width = g_Width;
+    swapChainDesc.Height = g_Height;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 
     ComPtr<IDXGISwapChain1> swapChain1;
     factory->CreateSwapChainForHwnd(
