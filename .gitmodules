@@ -1,3 +1,6 @@
 [submodule "submodules/DirectXMesh"]
 	path = submodules/DirectXMesh
 	url = git@github.com:microsoft/DirectXMesh.git
+[submodule "submodules/DirectX-Headers"]
+	path = submodules/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers.git
