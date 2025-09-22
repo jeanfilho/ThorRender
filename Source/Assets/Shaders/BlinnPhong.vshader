@@ -13,10 +13,20 @@ struct PSInput
     float2 UV : TEXCOORD0;
 };
 
-cbuffer ObjectData : register(b0)
+cbuffer FrameData : register(b0)
+{
+    float4x4 ViewProj;
+    float3 LightPos;
+    float __Padding0;
+    float3 LightColor;
+    float __Padding1;
+    float3 ViewPos;
+    float __Padding2;
+};
+
+cbuffer ObjectData : register(b1)
 {
     float4x4 Model;
-    float4x4 ViewProj;
     float2 UvOffset;
     float2 UvScale;
 };

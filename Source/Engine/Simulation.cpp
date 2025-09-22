@@ -25,11 +25,12 @@ Simulation::Simulation() :
 void Simulation::Init(const uint width, const uint height, const HWND hwnd)
 {
     InitD3D12(width, height, hwnd);
+    PostInit();
 }
 
 void Simulation::Release()
 {
-    // Cleanup
+    PreRelease();
     CloseHandle(m_FenceEvent);
 }
 
@@ -130,32 +131,6 @@ void Simulation::InitD3D12(const uint width, const uint height, const HWND hwnd)
     m_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
     m_FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     if (!m_FenceEvent) throw std::runtime_error("Failed to create fence event.");
-}
-
-void Simulation::PopulateCommandList()
-{
-    m_CommandAllocator[m_FrameIndex]->Reset();
-    m_CommandList->Reset(m_CommandAllocator[m_FrameIndex].Get(), nullptr);
-
-    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_RenderTargets[m_FrameIndex].Get(),
-        D3D12_RESOURCE_STATE_PRESENT,
-        D3D12_RESOURCE_STATE_RENDER_TARGET
-    );
-    m_CommandList->ResourceBarrier(1, &barrier);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_RtvDescriptorSize);
-    FLOAT clearColor[] = { 0.2f, 0.4f, 0.6f, 1.0f };
-    m_CommandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
-    barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_RenderTargets[m_FrameIndex].Get(),
-        D3D12_RESOURCE_STATE_RENDER_TARGET,
-        D3D12_RESOURCE_STATE_PRESENT
-    );
-    m_CommandList->ResourceBarrier(1, &barrier);
-
-    m_CommandList->Close();
 }
 
 void Simulation::WaitForPreviousFrame()

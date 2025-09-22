@@ -24,13 +24,14 @@ public:
     void ResizeScreen(const uint width, const uint height);
     void Render();
 
-
-private:
-    void PopulateCommandList();
+protected:
+    virtual void PopulateCommandList() = 0;
+    virtual void PostInit() {};
+    virtual void PreRelease() {};
     void WaitForPreviousFrame();
     void InitD3D12(const uint width, const uint height, const HWND hwnd);
 
-private:
+protected:
     ComPtr<ID3D12Device> m_Device;
     ComPtr<IDXGISwapChain3> m_SwapChain;
     ComPtr<ID3D12CommandQueue> m_CommandQueue;

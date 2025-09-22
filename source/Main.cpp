@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "Engine/Simulation.h"
+#include "Simulations/DebugTriangle/DebugTriangleSimulation.h"
 
 HWND g_HWND = nullptr;
 
@@ -61,7 +61,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     InitWindow(hInstance, nShowCmd);
 
-    g_Simulation = MakeUnique<Simulation>();
+    g_Simulation = MakeUnique<DebugTriangleSimulation>();
 
     g_Simulation->Init(g_Width, g_Height, g_HWND);
 

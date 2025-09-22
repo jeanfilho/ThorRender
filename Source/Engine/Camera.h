@@ -1,5 +1,4 @@
 #pragma once
-#include <DirectXMath.h>
 #include "Engine/BaseTypes.h"
 
 class Camera
@@ -28,23 +27,13 @@ public:
         m_FarZ = farZ;
     }
 
-    float3 GetPosition() const { return m_Position; }
-    float3 GetTarget() const { return m_Target; }
-    float3 GetUp() const { return m_Up; }
-
-    XMMATRIX GetViewMatrix() const
-    {
-        return XMMatrixLookAtLH(
-            XMLoadFloat3(&m_Position),
-            XMLoadFloat3(&m_Target),
-            XMLoadFloat3(&m_Up)
-        );
-    }
-
-    XMMATRIX GetProjectionMatrix() const
-    {
-        return XMMatrixPerspectiveFovLH(m_FovY, m_Aspect, m_NearZ, m_FarZ);
-    }
+    const float3& GetPosition() const { return m_Position; }
+    const float3& GetTarget() const { return m_Target; }
+    const float3& GetUp() const { return m_Up; }
+    const float& GetFovY() const { return m_FovY; }
+    const float& GetAspect() const { return m_Aspect; }
+    const float& GetNearZ() const { return m_NearZ; }
+    const float& GetFarZ() const { return m_FarZ; }
 
 private:
     float3 m_Position;

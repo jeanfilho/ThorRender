@@ -22,13 +22,6 @@ template <class _Ty, class _Alloc = std::allocator<_Ty>>
 using Vector = std::vector<_Ty, _Alloc>;
 
 using String = std::string;
-using WString = std::wstring;
-
-using StringStream = std::stringstream;
-using OStringStream = std::ostringstream;
-using WStringStream = std::wstringstream;
-
-using RuntimeError = std::runtime_error;
 
 // Pointer types
 template<class T>

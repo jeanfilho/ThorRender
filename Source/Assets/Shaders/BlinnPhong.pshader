@@ -6,18 +6,23 @@ struct PSInput
     float2 UV : TEXCOORD0;
 };
 
+cbuffer FrameData : register(b0)
+{
+    float4x4 ViewProj;
+    float3 LightPos;
+    float __Padding0;
+    float3 LightColor;
+    float __Padding1;
+    float3 ViewPos;
+    float __Padding2;
+};
+
 cbuffer MaterialData : register(b1)
 {
     float3 Albedo;
     float Metallic;
     float Roughness;
-};
-
-cbuffer FrameData : register(b2)
-{
-    float3 LightPos;
-    float3 LightColor;
-    float3 ViewPos;
+    float3 __Padding0;
 };
 
 Texture2D AlbedoMap : register(t0);
