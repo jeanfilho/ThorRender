@@ -5,15 +5,32 @@
 #include <algorithm>
 #include <numeric>
 #include <memory>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <stdexcept>
 
 #include <wrl/client.h>
 
 #include "DirectXMath.h"
 
-// Pointer types
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
+// STL types
+template <class _Ty, class _Alloc = std::allocator<_Ty>>
+using Vector = std::vector<_Ty, _Alloc>;
+
+using String = std::string;
+using WString = std::wstring;
+
+using StringStream = std::stringstream;
+using OStringStream = std::ostringstream;
+using WStringStream = std::wstringstream;
+
+using RuntimeError = std::runtime_error;
+
+// Pointer types
 template<class T>
 using SharedPtr = std::shared_ptr<T>;
 
@@ -78,6 +95,8 @@ constexpr float PI = XM_PI;
 constexpr float TWO_PI = XM_2PI;
 constexpr float HALF_PI = XM_PIDIV2;
 constexpr float QUARTER_PI = XM_PIDIV4;
+constexpr float DEG_TO_RAD = XM_PI / 180.0f;
+constexpr float RAD_TO_DEG = 180.0f / XM_PI;
 
 // ---------- Helper functions ------------
 // float2 operators
@@ -289,7 +308,7 @@ inline float4x3 operator*(const float4x4& a, const float4x3& b) noexcept
     return result;
 }
 
-inline float4x4 transpose(const float4x4& m) noexcept
+inline float4x4 Transpose(const float4x4& m) noexcept
 {
     return float4x4{
         m._11, m._21, m._31, m._41,
@@ -299,7 +318,7 @@ inline float4x4 transpose(const float4x4& m) noexcept
     };
 }
 
-inline float3 cross(const float3& a, const float3& b) noexcept
+inline float3 Cross(const float3& a, const float3& b) noexcept
 {
     return float3{
         a.y * b.z - a.z * b.y,
@@ -308,7 +327,7 @@ inline float3 cross(const float3& a, const float3& b) noexcept
     };
 }
 
-inline float4 cross(const float4& a, const float4& b) noexcept
+inline float4 Cross(const float4& a, const float4& b) noexcept
 {
     return float4{
         a.y * b.z - a.z * b.y,
@@ -318,238 +337,283 @@ inline float4 cross(const float4& a, const float4& b) noexcept
     };
 }
 
-inline float dot(const float2& a, const float2& b) noexcept
+inline float Dot(const float2& a, const float2& b) noexcept
 {
     return a.x * b.x + a.y * b.y;
 }
 
-inline float dot(const float3& a, const float3& b) noexcept
+inline float Dot(const float3& a, const float3& b) noexcept
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-inline float dot(const float4& a, const float4& b) noexcept
+inline float Dot(const float4& a, const float4& b) noexcept
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
-inline float length(const float2& v) noexcept
+inline float Length(const float2& v) noexcept
 {
-    return sqrt(dot(v, v));
+    return sqrt(Dot(v, v));
 }
 
-inline float length(const float3& v) noexcept
+inline float Length(const float3& v) noexcept
 {
-    return sqrt(dot(v, v));
+    return sqrt(Dot(v, v));
 }
 
-inline float length(const float4& v) noexcept
+inline float Length(const float4& v) noexcept
 {
-    return sqrt(dot(v, v));
+    return sqrt(Dot(v, v));
 }
 
-inline float2 normalze(const float2& v) noexcept
+inline float2 Normalize(const float2& v) noexcept
 {
-    float len = std::sqrt(dot(v, v));
+    float len = std::sqrt(Dot(v, v));
     if (len > 0.0f)
     {
         float invLen = 1.0f / len;
         return float2{ v.x * invLen, v.y * invLen };
     }
-    return v; // Return original vector if length is zero
+    return v;
 }
 
-inline float3 normalize(const float3& v) noexcept
+inline float3 Normalize(const float3& v) noexcept
 {
-    float len = length(v);
+    float len = Length(v);
     if (len > 0.0f)
     {
         float invLen = 1.0f / len;
         return float3{ v.x * invLen, v.y * invLen, v.z * invLen };
     }
-
-    return v; // Return original vector if length is zero
+    return v;
 }
 
-inline float4 normalize(const float4& v) noexcept
+inline float4 Normalize(const float4& v) noexcept
 {
-    float len = length(v);
+    float len = Length(v);
     if (len > 0.0f)
     {
         float invLen = 1.0f / len;
         return float4{ v.x * invLen, v.y * invLen, v.z * invLen, v.w * invLen};
     }
-
-    return v; // Return original vector if length is zero
+    return v;
 }
 
-inline float clamp(const float& v, float minVal, float maxVal) noexcept
+inline float Clamp(const float& v, float minVal, float maxVal) noexcept
 {
     return std::clamp(v, minVal, maxVal);
 }
 
-inline float2 clamp(const float2& v, float minVal, float maxVal) noexcept
+inline float2 Clamp(const float2& v, float minVal, float maxVal) noexcept
 {
     return float2{
-        clamp(v.x, minVal, maxVal),
-        clamp(v.y, minVal, maxVal)
+        Clamp(v.x, minVal, maxVal),
+        Clamp(v.y, minVal, maxVal)
     };
 }
 
-inline float3 clamp(const float3& v, float minVal, float maxVal) noexcept
+inline float3 Clamp(const float3& v, float minVal, float maxVal) noexcept
 {
     return float3{
-        clamp(v.x, minVal, maxVal),
-        clamp(v.y, minVal, maxVal),
-        clamp(v.z, minVal, maxVal)
+        Clamp(v.x, minVal, maxVal),
+        Clamp(v.y, minVal, maxVal),
+        Clamp(v.z, minVal, maxVal)
     };
 }
 
-inline float4 clamp(const float4& v, float minVal, float maxVal) noexcept
+inline float4 Clamp(const float4& v, float minVal, float maxVal) noexcept
 {
     return float4{
-        clamp(v.x, minVal, maxVal),
-        clamp(v.y, minVal, maxVal),
-        clamp(v.z, minVal, maxVal),
-        clamp(v.w, minVal, maxVal)
+        Clamp(v.x, minVal, maxVal),
+        Clamp(v.y, minVal, maxVal),
+        Clamp(v.z, minVal, maxVal),
+        Clamp(v.w, minVal, maxVal)
     };
 }
 
-inline float saturate(float value) noexcept
+inline float Saturate(float value) noexcept
 {
-    return clamp(value, 0.0f, 1.0f);
+    return Clamp(value, 0.0f, 1.0f);
 }
 
-inline float2 saturate(const float2& v) noexcept
+inline float2 Saturate(const float2& v) noexcept
 {
-    return clamp(v, 0.0f, 1.0f);
+    return Clamp(v, 0.0f, 1.0f);
 }
 
-inline float3 saturate(const float3& v) noexcept
+inline float3 Saturate(const float3& v) noexcept
 {
-    return clamp(v, 0.0f, 1.0f);
+    return Clamp(v, 0.0f, 1.0f);
 }
 
-inline float4 saturate(const float4& v) noexcept
+inline float4 Saturate(const float4& v) noexcept
 {
-    return clamp(v, 0.0f, 1.0f);
+    return Clamp(v, 0.0f, 1.0f);
 }
 
-inline float lerp(float a, float b, float t) noexcept
+inline float Lerp(float a, float b, float t) noexcept
 {
     return std::lerp(a, b, t);
 }
 
-inline float2 lerp(const float2& a, const float2& b, float t) noexcept
+inline float2 Lerp(const float2& a, const float2& b, float t) noexcept
 {
     return float2{
-        lerp(a.x, b.x, t),
-        lerp(a.y, b.y, t)
+        Lerp(a.x, b.x, t),
+        Lerp(a.y, b.y, t)
     };
 }
 
-inline float3 lerp(const float3& a, const float3& b, float t) noexcept
+inline float3 Lerp(const float3& a, const float3& b, float t) noexcept
 {
     return float3{
-        lerp(a.x, b.x, t),
-        lerp(a.y, b.y, t),
-        lerp(a.z, b.z, t)
+        Lerp(a.x, b.x, t),
+        Lerp(a.y, b.y, t),
+        Lerp(a.z, b.z, t)
     };
 }
 
-inline float4 lerp(const float4& a, const float4& b, float t) noexcept
+inline float4 Lerp(const float4& a, const float4& b, float t) noexcept
 {
     return float4{
-        lerp(a.x, b.x, t),
-        lerp(a.y, b.y, t),
-        lerp(a.z, b.z, t),
-        lerp(a.w, b.w, t)
+        Lerp(a.x, b.x, t),
+        Lerp(a.y, b.y, t),
+        Lerp(a.z, b.z, t),
+        Lerp(a.w, b.w, t)
     };
 }
 
-inline float radians(float degrees) noexcept
+inline float Radians(float degrees) noexcept
 {
     return degrees * (std::numbers::pi_v<float> / 180.0f);
 }
 
-inline float2 radians(float2& degrees) noexcept
+inline float2 Radians(float2& degrees) noexcept
 {
     return degrees * (std::numbers::pi_v<float> / 180.0f);
 }
 
-inline float3 radians(float3& degrees) noexcept
+inline float3 Radians(float3& degrees) noexcept
 {
     return degrees * (std::numbers::pi_v<float> / 180.0f);
 }
 
-inline float4 radians(float4& degrees) noexcept
+inline float4 Radians(float4& degrees) noexcept
 {
     return degrees * (std::numbers::pi_v<float> / 180.0f);
 }
 
-inline float degrees(float radians) noexcept
+inline float Degrees(float radians) noexcept
 {
     return radians * (180.0f / std::numbers::pi_v<float>);
 }
 
-inline float2 degrees(float2& radians) noexcept
+inline float2 Degrees(float2& radians) noexcept
 {
     return radians * (180.0f / std::numbers::pi_v<float>);
 }
 
-inline float3 degrees(float3& radians) noexcept
+inline float3 Degrees(float3& radians) noexcept
 {
     return radians * (180.0f / std::numbers::pi_v<float>);
 }
 
-inline float4 degrees(float4& radians) noexcept
+inline float4 Degrees(float4& radians) noexcept
 {
     return radians * (180.0f / std::numbers::pi_v<float>);
 }
 
-inline float smoothstep(float edge0, float edge1, float x) noexcept
+inline float Smoothstep(float a, float b, float x) noexcept
 {
-    x = saturate((x - edge0) / (edge1 - edge0));
+    x = Saturate((x - a) / (b - a));
     return x * x * (3 - 2 * x);
 }
 
-inline float2 smoothstep(float edge0, float edge1, const float2& x) noexcept
+inline float2 Smoothstep(float a, float b, const float2& x) noexcept
 {
     return float2{
-        smoothstep(edge0, edge1, x.x),
-        smoothstep(edge0, edge1, x.y)
+        Smoothstep(a, b, x.x),
+        Smoothstep(a, b, x.y)
     };
 }
 
-inline float3 smoothstep(float edge0, float edge1, const float3& x) noexcept
+inline float3 Smoothstep(float a, float b, const float3& x) noexcept
 {
     return float3{
-        smoothstep(edge0, edge1, x.x),
-        smoothstep(edge0, edge1, x.y),
-        smoothstep(edge0, edge1, x.z)
+        Smoothstep(a, b, x.x),
+        Smoothstep(a, b, x.y),
+        Smoothstep(a, b, x.z)
     };
 }
 
-inline float4 smoothstep(float edge0, float edge1, const float4& x) noexcept
+inline float4 Smoothstep(float a, float b, const float4& x) noexcept
 {
     return float4{
-        smoothstep(edge0, edge1, x.x),
-        smoothstep(edge0, edge1, x.y),
-        smoothstep(edge0, edge1, x.z),
-        smoothstep(edge0, edge1, x.w)
+        Smoothstep(a, b, x.x),
+        Smoothstep(a, b, x.y),
+        Smoothstep(a, b, x.z),
+        Smoothstep(a, b, x.w)
     };
 }
 
-// Reflect incident vector I around normal N
-inline float3 reflect(const float3& I, const float3& N) noexcept
+// Reflect incident vector i around normal n
+inline float3 Reflect(const float3& i, const float3& n) noexcept
 {
-    return I - 2.0f * dot(N, I) * N;
+    return i - 2.0f * Dot(n, i) * n;
 }
 
-// Reflect incident vector I around normal N. N.w remains unchanged
-inline float4 reflect(const float4& I, const float4& N) noexcept
+// Reflect incident vector i around normal n
+// n.w remains unchanged
+inline float4 Reflect(const float4& i, const float4& n) noexcept
 {
-    float4 result = I - 2.0f * dot(N, I) * N;
-    result.w = N.w;
+    float4 result = i - 2.0f * Dot(n, i) * n;
+    result.w = n.w;
     return result;
+}
+
+
+inline float Atan(float y) noexcept
+{
+    return std::atan(y);
+}
+inline float Atan2(float y, float x) noexcept
+{
+    return std::atan2(y, x);
+}
+inline float Acos(float x) noexcept
+{
+    return std::acos(x);
+}
+inline float Asin(float x) noexcept
+{
+    return std::asin(x);
+}
+inline float Cos(float x) noexcept
+{
+    return std::cos(x);
+}
+inline float Sin(float x) noexcept
+{
+    return std::sin(x);
+}
+inline float Tan(float x) noexcept
+{
+    return std::tan(x);
+}
+inline float Exp(float x) noexcept
+{
+    return std::exp(x);
+}
+inline float Log(float x) noexcept
+{
+    return std::log(x);
+}
+inline float Pow(float x, float y) noexcept
+{
+    return std::pow(x, y);
+}
+inline float Sqrt(float x) noexcept
+{
+    return std::sqrt(x);
 }

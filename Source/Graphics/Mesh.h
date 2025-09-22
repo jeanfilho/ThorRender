@@ -17,19 +17,18 @@ struct MeshVertex
 // Material: BRDF parameters + texture resource handles
 struct Material
 {
-    float3 albedo;              // Base color
-    float metallic;             // 0 = dielectric, 1 = metal
-    float roughness;            // 0 = smooth, 1 = rough
+    float3 Albedo;
+    float Metallic;
+    float Roughness;
 
     // Texture resource handles
-    ComPtr<ID3D12Resource> albedoRoughnessMap;
-    ComPtr<ID3D12Resource> normalMap;
-    ComPtr<ID3D12Resource> metallicMap;
-    ComPtr<ID3D12Resource> roughnessMap;
+    ComPtr<ID3D12Resource> AlbedoRoughnessMap;
+    ComPtr<ID3D12Resource> NormalMap;
+    ComPtr<ID3D12Resource> MetallicMap;
+    ComPtr<ID3D12Resource> RoughnessMap;
 
-    // UV transform for shifting/scaling/rotating texture coordinates
-    float2 uvOffset = { 0.0f, 0.0f };
-    float2 uvScale = { 1.0f, 1.0f };
+    float2 UvOffset = { 0.0f, 0.0f };
+    float2 UvScale = { 1.0f, 1.0f };
 };
 
 class Mesh
@@ -39,29 +38,29 @@ public:
 
     void AddVertex(const MeshVertex& v)
     {
-        m_vertices.push_back(v);
+        m_Vertices.push_back(v);
     }
 
     void AddTriangle(uint32_t i0, uint32_t i1, uint32_t i2)
     {
-        m_indices.push_back(i0);
-        m_indices.push_back(i1);
-        m_indices.push_back(i2);
+        m_Indices.push_back(i0);
+        m_Indices.push_back(i1);
+        m_Indices.push_back(i2);
     }
 
     void SetMaterial(const Material& material)
     {
-        m_material = material;
+        m_Material = material;
     }
 
-    const std::vector<MeshVertex>& GetVertices() const { return m_vertices; }
-    const std::vector<uint32_t>& GetIndices() const { return m_indices; }
-    const Material& GetMaterial() const { return m_material; }
-    size_t GetVertexCount() const { return m_vertices.size(); }
-    size_t GetIndexCount() const { return m_indices.size(); }
+    const Vector<MeshVertex>& GetVertices() const { return m_Vertices; }
+    const Vector<uint32>& GetIndices() const { return m_Indices; }
+    const Material& GetMaterial() const { return m_Material; }
+    size_t GetVertexCount() const { return m_Vertices.size(); }
+    size_t GetIndexCount() const { return m_Indices.size(); }
 
 private:
-    std::vector<MeshVertex> m_vertices;
-    std::vector<uint32_t> m_indices;
-    Material m_material;
+    Vector<MeshVertex> m_Vertices;
+    Vector<uint32> m_Indices;
+    Material m_Material;
 };

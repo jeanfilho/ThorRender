@@ -1,15 +1,17 @@
 // Simple vertex shader for triangle
 struct VSInput {
-    float3 position : POSITION;
-    float3 color : COLOR;
+    float3 Position : POSITION;
+    float3 Color : COLOR;
 };
+
 struct PSInput {
-    float4 position : SV_POSITION;
-    float3 color : COLOR;
+    float4 Position : SV_POSITION;
+    float3 Color : COLOR;
 };
+
 PSInput main(VSInput input) {
     PSInput output;
-    output.position = float4(input.position, 1.0f);
-    output.color = input.color;
+    output.Position = float4(input.Position, 1.0f);
+    output.Color = input.Color;
     return output;
 }

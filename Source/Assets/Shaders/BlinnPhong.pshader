@@ -1,30 +1,30 @@
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float3 worldPos : WORLDPOS;
-    float3 normal : NORMAL;
-    float2 uv : TEXCOORD0;
+    float4 Position : SV_POSITION;
+    float3 WorldPos : WORLDPOS;
+    float3 Normal : NORMAL;
+    float2 UV : TEXCOORD0;
 };
 
 cbuffer MaterialData : register(b1)
 {
-    float3 albedo;
-    float metallic;
-    float roughness;
+    float3 Albedo;
+    float Metallic;
+    float Roughness;
 };
 
 cbuffer FrameData : register(b2)
 {
-    float3 lightPos;
-    float3 lightColor;
-    float3 viewPos;
+    float3 LightPos;
+    float3 LightColor;
+    float3 ViewPos;
 };
 
-Texture2D albedoMap : register(t0);
-Texture2D normalMap : register(t1);
-Texture2D metallicMap : register(t2);
-Texture2D roughnessMap : register(t3);
-SamplerState linearSampler : register(s0);
+Texture2D AlbedoMap : register(t0);
+Texture2D NormalMap : register(t1);
+Texture2D MetallicMap : register(t2);
+Texture2D RoughnessMap : register(t3);
+SamplerState LinearSampler : register(s0);
 
 float3 GetNormal(Texture2D normalMap, SamplerState samp, float2 uv, float3 geomNormal)
 {
@@ -36,18 +36,18 @@ float3 GetNormal(Texture2D normalMap, SamplerState samp, float2 uv, float3 geomN
 float4 main(PSInput input) : SV_TARGET
 {
     // Sample textures
-    float3 baseColor = albedoMap.Sample(linearSampler, input.uv).rgb * albedo;
-    float metal = metallicMap.Sample(linearSampler, input.uv).r * metallic;
-    float rough = roughnessMap.Sample(linearSampler, input.uv).r * roughness;
-    float3 N = GetNormal(normalMap, linearSampler, input.uv, normalize(input.normal));
-    float3 V = normalize(viewPos - input.worldPos);
-    float3 L = normalize(lightPos - input.worldPos);
-    float3 H = normalize(L + V);
+    float3 baseColor = AlbedoMap.Sample(LinearSampler, input.UV).rgb * Albedo;
+    float metal = MetallicMap.Sample(LinearSampler, input.UV).r * Metallic;
+    float rough = RoughnessMap.Sample(LinearSampler, input.UV).r * Roughness;
+    float3 n = GetNormal(NormalMap, LinearSampler, input.UV, normalize(input.Normal));
+    float3 v = normalize(ViewPos - input.WorldPos);
+    float3 l = normalize(LightPos - input.WorldPos);
+    float3 h = normalize(l + v);
 
     // Blinn-Phong
     float3 ambient = 0.05 * baseColor;
-    float3 diffuse = max(dot(N, L), 0.0) * baseColor * lightColor;
-    float3 specular = pow(max(dot(N, H), 0.0), 32.0 * (1.0 - rough)) * lightColor * lerp(0.04, 1.0, metal);
+    float3 diffuse = max(dot(n, l), 0.0) * baseColor * LightColor;
+    float3 specular = pow(max(dot(n, h), 0.0), 32.0 * (1.0 - rough)) * LightColor * lerp(0.04, 1.0, metal);
 
     float3 color = ambient + diffuse + specular;
     return float4(color, 1.0f);
