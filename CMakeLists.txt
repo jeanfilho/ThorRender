@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 4.1.1)
 project(ThorRender)
 
+# Enable folder organization in the Solution Explorer
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+add_subdirectory(submodules/DirectX-Headers)
+set_target_properties(DirectX-Headers PROPERTIES FOLDER "external/DirectX")
+set_target_properties(DirectX-Guids PROPERTIES FOLDER "external/DirectX")
 
 # Source root
 set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/source")
@@ -15,6 +21,10 @@ file(GLOB_RECURSE _source_files
 # Create project
 add_executable(ThorRender ${_source_files})
 
+set_target_properties(ThorRender PROPERTIES
+       WIN32_EXECUTABLE TRUE
+   )
+
 # Create project filters
 foreach(_source IN ITEMS ${_source_files})
     get_filename_component(_source_path "${_source}" PATH)
@@ -23,10 +33,14 @@ foreach(_source IN ITEMS ${_source_files})
     source_group("${_group_path}" FILES "${_source}")
 endforeach()
 
+# Add dependencies
+add_dependencies(ThorRender DirectX-Headers)
+
 # Includes
 target_include_directories(ThorRender PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/source
     ${CMAKE_CURRENT_SOURCE_DIR}/external
+    ${CMAKE_CURRENT_SOURCE_DIR}/submodules/DirectX-Headers/include
 )
 
 #DX12 Libraries
