@@ -36,10 +36,13 @@ protected:
     ComPtr<IDXGISwapChain3> m_SwapChain;
     ComPtr<ID3D12CommandQueue> m_CommandQueue;
     ComPtr<ID3D12DescriptorHeap> m_RtvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
     ComPtr<ID3D12Resource> m_RenderTargets[FrameCount];
+    ComPtr<ID3D12Resource> m_DepthBuffers[FrameCount];
     ComPtr<ID3D12CommandAllocator> m_CommandAllocator[FrameCount];
     ComPtr<ID3D12GraphicsCommandList> m_CommandList;
     uint m_RtvDescriptorSize;
+    uint m_DsvDescriptorSize;
     uint m_FrameIndex;
 
     // Fence objects

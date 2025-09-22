@@ -39,5 +39,6 @@ PSInput main(VSInput input)
     output.WorldPos = worldPos.xyz;
     output.Normal = mul(Model, float4(input.Normal, 1.0f)).xyz;
     output.UV = input.UV * UvScale + UvOffset;
+    
     return output;
 }

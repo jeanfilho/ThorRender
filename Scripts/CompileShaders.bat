@@ -15,9 +15,11 @@ REM Create output folder if it doesn't exist
 if not exist "%OUT%" mkdir "%OUT%"
 
 REM Compile vertex shaders
+echo:
 echo ----- Vertex Shaders in %SRC% ------
 for /R "%SRC%" %%F in (*.vshader) do (
-    echo Compiling %%F in %%~dpF
+    echo:
+    echo Compiling %%F
     set "filefolder=%%~dpF"
     set "relpath=!filefolder:%SRC%=!"
 
@@ -31,13 +33,14 @@ for /R "%SRC%" %%F in (*.vshader) do (
     if not "!relpath!"=="" set "outdir=!relpath!!outdir!\"
     if not exist "!outdir!" mkdir "!outdir!"
     set "outfile=!outdir!%%~nF_vs.dxil"
-    echo Outfile: !outfile!
     "%DXC%" -T vs_6_0 -E main -Fo "!outfile!" "%%F"
 )
 
 REM Compile pixel shaders
+echo:
 echo ----- Pixel Shaders in %SRC% ------
 for /R "%SRC%" %%F in (*.pshader) do (
+    echo:
     echo Compiling %%F
     set "filefolder=%%~dpF"
     set "relpath=!filefolder:%SRC%=!"
@@ -52,10 +55,10 @@ for /R "%SRC%" %%F in (*.pshader) do (
     if not "!relpath!"=="" set "outdir=!relpath!!outdir!\"
     if not exist "!outdir!" mkdir "!outdir!"
     set "outfile=!outdir!%%~nF_ps.dxil"
-    echo Outfile: !outfile!
     "%DXC%" -T ps_6_0 -E main -Fo "!outfile!" "%%F"
 )
 
+echo:
 echo Done.
 endlocal
 popd

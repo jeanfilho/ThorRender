@@ -24,6 +24,7 @@ void MeshPipeline::Bind(ID3D12GraphicsCommandList* commandList) const
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
+// TODO add root signature description as argument instead of using hardcoded values
 void MeshPipeline::CreateRootSignature(ID3D12Device* device)
 {
     // Root parameters for constant buffers and texture resources

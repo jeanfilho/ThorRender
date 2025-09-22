@@ -33,7 +33,7 @@ void Object::SetUvScale(const float2& uvScale)
     m_ConstantBufferDirty = true;
 }
 
-void Object::InitializeConstantBuffer(ID3D12Device* device)
+void Object::Initialize(ID3D12Device* device)
 {
     // Create constant buffer for ObjectData
     D3D12_HEAP_PROPERTIES heapProps = {};
@@ -116,12 +116,12 @@ void Object::UpdateWorldMatrix()
     m_ConstantBufferDirty = true;
 }
 
-void Object::Draw(ID3D12GraphicsCommandList* commandList) const
+void Object::Draw(ID3D12GraphicsCommandList* commandList)
 {
     if (m_Mesh && m_ObjectDataBuffer)
     {
         // Update constant buffer if needed
-        const_cast<Object*>(this)->UpdateConstantBuffer();
+        UpdateConstantBuffer();
 
         // Set the object constant buffer (ObjectData at register b1)
         commandList->SetGraphicsRootConstantBufferView(1, m_ObjectDataBuffer->GetGPUVirtualAddress());

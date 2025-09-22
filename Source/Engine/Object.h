@@ -24,8 +24,8 @@ public:
     void SetUvScale(const float2& uvScale);
     void SetMesh(SharedPtr<Mesh> mesh) { m_Mesh = mesh; }
 
-    void InitializeConstantBuffer(ID3D12Device* device);
-    void Draw(ID3D12GraphicsCommandList* commandList) const;
+    void Initialize(ID3D12Device* device);
+    void Draw(ID3D12GraphicsCommandList* commandList);
 
 private:
     void UpdateConstantBuffer();
@@ -49,7 +49,6 @@ private:
     float2 m_UvScale = {1.0f, 1.0f};
     
     SharedPtr<Mesh> m_Mesh;
-    SharedPtr<MeshPipeline> m_MeshPipeline;
     
     // D3D12 constant buffer
     ComPtr<ID3D12Resource> m_ObjectDataBuffer;

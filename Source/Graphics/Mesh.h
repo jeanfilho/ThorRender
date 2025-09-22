@@ -81,7 +81,9 @@ public:
 private:
     ComPtr<ID3D12Resource> m_VertexBuffer = nullptr;
     ComPtr<ID3D12Resource> m_IndexBuffer = nullptr;
+    ComPtr<ID3D12Resource> m_MaterialBuffer = nullptr;
     D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView = {};
     D3D12_INDEX_BUFFER_VIEW m_IndexBufferView = {};
+
     uint m_IndexCount = 0;
 };

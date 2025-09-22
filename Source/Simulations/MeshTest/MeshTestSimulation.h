@@ -22,7 +22,9 @@ private:
     const float3 m_LightDirection = Normalize(float3{ -1.0f, -1.0f, -1.0f });
 
     UniquePtr<Object> m_Object;
+    SharedPtr<MeshPipeline> m_MeshPipeline;
     UniquePtr<Camera> m_Camera;
+
 
     struct FrameData
     {
@@ -35,4 +37,5 @@ private:
     static_assert(sizeof(FrameData) % 16 == 0, "FrameData must be 16-byte aligned");
 
     ComPtr<ID3D12Resource> m_FrameData;
+    
 };

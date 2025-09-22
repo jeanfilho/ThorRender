@@ -6,6 +6,7 @@
 #include <numeric>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <sstream>
 #include <stdexcept>
@@ -20,6 +21,9 @@ using namespace DirectX;
 // STL types
 template <class _Ty, class _Alloc = std::allocator<_Ty>>
 using Vector = std::vector<_Ty, _Alloc>;
+
+template <class _Kty, class _Ty, class _Hasher = std::hash<_Kty>, class _Keyeq = std::equal_to<_Kty>, class _Alloc = std::allocator<std::pair<const _Kty, _Ty>>>
+using HashMap = std::unordered_map<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>;
 
 using String = std::string;
 

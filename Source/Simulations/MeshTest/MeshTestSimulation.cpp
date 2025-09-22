@@ -33,18 +33,32 @@ void MeshTestSimulation::PopulateCommandList()
     );
     m_CommandList->ResourceBarrier(1, &barrier);
 
-    // Clear the render target
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_RtvDescriptorSize);
-    FLOAT clearColor[] = { 0.2f, 0.4f, 0.6f, 1.0f };
-    m_CommandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    // Clear the render target & depth Buffers
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_RtvDescriptorSize);
+        FLOAT clearColor[] = { 0.2f, 0.4f, 0.6f, 1.0f };
+        m_CommandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_DsvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_DsvDescriptorSize);
+        m_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+    }
+
+    // Set render target & depth buffer
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RtvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_RtvDescriptorSize);
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_DsvHeap->GetCPUDescriptorHandleForHeapStart(), m_FrameIndex, m_DsvDescriptorSize);
+        m_CommandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+    }
 
     // Draw mesh
-    DXGI_SWAP_CHAIN_DESC1 desc;
-    m_SwapChain->GetDesc1(&desc);
-    uint width = desc.Width;
-    uint height = desc.Height;
+    {
+        m_MeshPipeline->Bind(m_CommandList.Get());
 
-    m_Object->Draw(m_CommandList.Get());
+        // Set frame data constant buffer (b0)
+        m_CommandList->SetGraphicsRootConstantBufferView(0, m_FrameData->GetGPUVirtualAddress());
+
+        m_Object->Draw(m_CommandList.Get());
+    }
 
     // Transition final frame to present
     barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -64,10 +78,23 @@ void MeshTestSimulation::PostInit()
     m_Camera->SetPosition({ 0.0f, 0.0f, -30.0f });
     m_Camera->SetPerspective(90.0f, 16.0f / 9.0f, 0.1f, 100.0f);
 
-    // Create mesh and Object
-    SharedPtr<Mesh> mesh = MakeShared<Mesh>(CreateSphereMesh(), m_Device.Get());
-    m_Object = MakeUnique<Object>();
-    m_Object->SetMesh(mesh);
+
+    // Create sphere
+    {
+        D3D12_RESOURCE_DESC depthDesc, renderDesc;
+        renderDesc = m_RenderTargets[0]->GetDesc();
+        depthDesc = m_DepthBuffers[0]->GetDesc();
+
+        // Create mesh, object and pipeline
+        m_Object = MakeUnique<Object>();
+        m_Object->Initialize(m_Device.Get());
+
+        m_MeshPipeline = MakeShared<MeshPipeline>();
+        m_MeshPipeline->Initialize(m_Device.Get(), renderDesc.Format, depthDesc.Format);
+
+        SharedPtr<Mesh> mesh = MakeShared<Mesh>(CreateSphereMesh(), m_Device.Get());
+        m_Object->SetMesh(mesh);
+    }
 
     // Create frame data buffer
     {

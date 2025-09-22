@@ -1,3 +1,5 @@
+#define FLAT_SHADING
+
 struct PSInput
 {
     float4 Position : SV_POSITION;
@@ -22,13 +24,16 @@ cbuffer MaterialData : register(b1)
     float3 Albedo;
     float Metallic;
     float Roughness;
-    float3 __Padding0;
+    float __Padding3[3];
 };
 
+#ifndef FLAT_SHADING
 Texture2D AlbedoMap : register(t0);
 Texture2D NormalMap : register(t1);
 Texture2D MetallicMap : register(t2);
 Texture2D RoughnessMap : register(t3);
+#endif
+
 SamplerState LinearSampler : register(s0);
 
 float3 GetNormal(Texture2D normalMap, SamplerState samp, float2 uv, float3 geomNormal)
@@ -40,11 +45,21 @@ float3 GetNormal(Texture2D normalMap, SamplerState samp, float2 uv, float3 geomN
 
 float4 main(PSInput input) : SV_TARGET
 {
+    return float4(1, 0, 0, 1);
+
+#ifndef FLAT_SHADING
     // Sample textures
     float3 baseColor = AlbedoMap.Sample(LinearSampler, input.UV).rgb * Albedo;
     float metal = MetallicMap.Sample(LinearSampler, input.UV).r * Metallic;
     float rough = RoughnessMap.Sample(LinearSampler, input.UV).r * Roughness;
     float3 n = GetNormal(NormalMap, LinearSampler, input.UV, normalize(input.Normal));
+#else
+    float3 baseColor = Albedo;
+    float metal = Metallic;
+    float rough = Roughness;
+    float3 n = normalize(input.Normal);
+#endif    
+    
     float3 v = normalize(ViewPos - input.WorldPos);
     float3 l = normalize(LightPos - input.WorldPos);
     float3 h = normalize(l + v);

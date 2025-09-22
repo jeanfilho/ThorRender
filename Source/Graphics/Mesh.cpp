@@ -11,7 +11,7 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
     const UINT vertexBufferSize = vertices.size() * sizeof(MeshVertex);
     {
         // Create default heap buffer
-        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
         device->CreateCommittedResource(
             &heapProperties,
@@ -28,7 +28,7 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
             HRESULT hr = m_VertexBuffer->Map(0, &readRange, &pData);
             if (FAILED(hr))
                 throw std::runtime_error("Failed to map frame data buffer");
-            memcpy(pData, &vertices, vertexBufferSize);
+            memcpy(pData, vertices.data(), vertexBufferSize);
             m_VertexBuffer->Unmap(0, nullptr);
         }
 
@@ -42,7 +42,7 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
     const UINT indexBufferSize = indices.size() * sizeof(uint32_t);
     {
         // Create default heap buffer
-        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
         device->CreateCommittedResource(
             &heapProperties,
@@ -59,7 +59,7 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
             HRESULT hr = m_IndexBuffer->Map(0, &readRange, &pData);
             if (FAILED(hr))
                 throw std::runtime_error("Failed to map frame data buffer");
-            memcpy(pData, &vertices, indexBufferSize);
+            memcpy(pData, indices.data(), indexBufferSize);
             m_IndexBuffer->Unmap(0, nullptr);
         }
 
@@ -68,10 +68,37 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
         m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
         m_IndexBufferView.SizeInBytes = indexBufferSize;
     }
+
+    // Create material buffer
+    {
+        // Create default heap buffer
+        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(Material));
+        device->CreateCommittedResource(
+            &heapProperties,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&m_MaterialBuffer));
+
+        // Copy data to the buffer
+        {
+            void* pData;
+            CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
+            HRESULT hr = m_MaterialBuffer->Map(0, &readRange, &pData);
+            if (FAILED(hr))
+                throw std::runtime_error("Failed to map frame data buffer");
+            Material material = meshTemplate.GetMaterial();
+            memcpy(pData, &material, sizeof(Material));
+            m_MaterialBuffer->Unmap(0, nullptr);
+        }
+    }
 }
 
 void Mesh::Draw(ID3D12GraphicsCommandList* commandList) const
 {
+    commandList->SetGraphicsRootConstantBufferView(1, m_MaterialBuffer->GetGPUVirtualAddress());
     commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
     commandList->IASetIndexBuffer(&m_IndexBufferView);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
