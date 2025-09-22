@@ -1,1 +1,1 @@
-Learning project
+Practice project
