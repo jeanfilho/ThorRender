@@ -20,7 +20,21 @@ file(GLOB_RECURSE _source_files
     LIST_DIRECTORIES false
     "${_src_root_path}/*.c*"
     "${_src_root_path}/*.h*"
+    "${_src_root_path}/*.vshader"
+    "${_src_root_path}/*.pshader"
+    "${_src_root_path}/*.cshader"
 )
+
+# Accumulate shader files
+file(GLOB_RECURSE _shader_files 
+    LIST_DIRECTORIES false
+    "${_src_root_path}/*.vshader"
+    "${_src_root_path}/*.pshader"
+    "${_src_root_path}/*.cshader"
+)
+
+# Set property to skip compilation for all shader files
+set_source_files_properties(${_shader_files} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 # Create project
 add_executable(ThorRender ${_source_files})

@@ -1,0 +1,54 @@
+struct PSInput
+{
+    float4 position : SV_POSITION;
+    float3 worldPos : WORLDPOS;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD0;
+};
+
+cbuffer MaterialData : register(b1)
+{
+    float3 albedo;
+    float metallic;
+    float roughness;
+};
+
+cbuffer FrameData : register(b2)
+{
+    float3 lightPos;
+    float3 lightColor;
+    float3 viewPos;
+};
+
+Texture2D albedoMap : register(t0);
+Texture2D normalMap : register(t1);
+Texture2D metallicMap : register(t2);
+Texture2D roughnessMap : register(t3);
+SamplerState linearSampler : register(s0);
+
+float3 GetNormal(Texture2D normalMap, SamplerState samp, float2 uv, float3 geomNormal)
+{
+    float3 n = normalMap.Sample(samp, uv).xyz * 2.0f - 1.0f;
+    // Assume tangent space = geometry normal for simplicity
+    return normalize(n + geomNormal);
+}
+
+float4 main(PSInput input) : SV_TARGET
+{
+    // Sample textures
+    float3 baseColor = albedoMap.Sample(linearSampler, input.uv).rgb * albedo;
+    float metal = metallicMap.Sample(linearSampler, input.uv).r * metallic;
+    float rough = roughnessMap.Sample(linearSampler, input.uv).r * roughness;
+    float3 N = GetNormal(normalMap, linearSampler, input.uv, normalize(input.normal));
+    float3 V = normalize(viewPos - input.worldPos);
+    float3 L = normalize(lightPos - input.worldPos);
+    float3 H = normalize(L + V);
+
+    // Blinn-Phong
+    float3 ambient = 0.05 * baseColor;
+    float3 diffuse = max(dot(N, L), 0.0) * baseColor * lightColor;
+    float3 specular = pow(max(dot(N, H), 0.0), 32.0 * (1.0 - rough)) * lightColor * lerp(0.04, 1.0, metal);
+
+    float3 color = ambient + diffuse + specular;
+    return float4(color, 1.0f);
+}

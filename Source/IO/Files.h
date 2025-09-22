@@ -7,8 +7,6 @@
 
 #include <filesystem>
 
-using Microsoft::WRL::ComPtr;
-
 // Defined relative to the project directory
 #define SHADER_PATH "../Temp/Shaders/"
 
