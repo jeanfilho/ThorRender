@@ -7,6 +7,10 @@
 #include <algorithm>
 #include <stdexcept>
 
+#ifdef _DEBUG
+#include "Debug/DebugLayer.h"
+#endif
+
 using namespace Microsoft::WRL;
 
 constexpr UINT Width = 800;
@@ -29,6 +33,16 @@ UINT g_frameIndex;
 ComPtr<ID3D12Fence> g_fence;
 UINT64 g_fenceValue[FrameCount] = {};
 HANDLE g_fenceEvent = nullptr;
+
+#ifdef _DEBUG
+// Global debug layer instance
+D3D12DebugLayer g_debugLayer(true);
+#endif
+
+
+// Debug Triangle
+#include "Debug/DebugTriangle.h"
+std::unique_ptr<DebugTriangle> g_debugTriangle;
 
 // Forward declarations
 void InitWindow(HINSTANCE hInstance, int nCmdShow);
@@ -74,6 +88,11 @@ void InitD3D12()
     ComPtr<IDXGIAdapter1> adapter;
     factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, __uuidof(IDXGIAdapter1), &adapter);
     D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&g_device));
+
+#ifdef _DEBUG
+    // Attach debug layer to device
+    g_debugLayer.AttachToDevice(g_device);
+#endif
 
     // Command queue
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -148,6 +167,12 @@ void PopulateCommandList()
     FLOAT clearColor[] = { 0.2f, 0.4f, 0.6f, 1.0f };
     g_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
+
+    g_debugTriangle->Draw(g_commandList.Get(),
+        rtvHandle,
+        g_renderTargets[g_frameIndex]->GetDesc().Width,
+        g_renderTargets[g_frameIndex]->GetDesc().Height);
+
     barrier = CD3DX12_RESOURCE_BARRIER::Transition(
         g_renderTargets[g_frameIndex].Get(),
         D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -156,6 +181,11 @@ void PopulateCommandList()
     g_commandList->ResourceBarrier(1, &barrier);
 
     g_commandList->Close();
+}
+
+void InitApp()
+{
+    g_debugTriangle = std::make_unique<DebugTriangle>(g_device);
 }
 
 void WaitForPreviousFrame()
@@ -183,12 +213,23 @@ void Render()
     g_swapChain->Present(1, 0);
 
     WaitForPreviousFrame();
+
+#ifdef _DEBUG
+    // Dump debug messages to Output window
+    g_debugLayer.DumpStoredMessages();
+#endif
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
+// Entry point
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
-    InitWindow(hInstance, nCmdShow);
+    // Silence "unreferenced parameter" warnings for parameters we don't use.
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+
+    InitWindow(hInstance, nShowCmd);
     InitD3D12();
+    InitApp();
 
     MSG msg = {};
     while (msg.message != WM_QUIT) {

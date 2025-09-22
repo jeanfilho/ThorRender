@@ -4,6 +4,10 @@ project(ThorRender)
 # Enable folder organization in the Solution Explorer
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 add_subdirectory(submodules/DirectX-Headers)
 set_target_properties(DirectX-Headers PROPERTIES FOLDER "external/DirectX")
 set_target_properties(DirectX-Guids PROPERTIES FOLDER "external/DirectX")
