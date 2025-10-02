@@ -5,20 +5,16 @@
 void MeshTestSimulation::PopulateCommandList()
 {
     // Calculate frame data
-    FrameData frameData;
+    FrameData frameData{};
     frameData.LightDirection = m_LightDirection;
-    frameData.CameraPosition = m_Camera->GetPosition();
-    frameData.ViewProjection = XMMatrixTranspose(GetViewMatrix(*m_Camera) * GetProjectionMatrix(*m_Camera));
+    frameData.ViewPosition = m_Camera->GetPosition();
+    frameData.ViewProj = XMMatrixTranspose(m_Camera->GetViewProjectionMatrix());
+    frameData.LightColor = m_LightColor;
+    frameData.InvView = XMMatrixTranspose(XMMatrixInverse(nullptr, m_Camera->GetViewMatrix()));
 
     // Copy frame data to the buffer
     {
-        void* pData;
-        CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-        HRESULT hr = m_FrameData->Map(0, &readRange, &pData);
-        if (FAILED(hr))
-            throw std::runtime_error("Failed to map frame data buffer");
-        memcpy(pData, &frameData, sizeof(FrameData));
-        m_FrameData->Unmap(0, nullptr);
+        memcpy(m_MappedFrameData + m_FrameDataSize * m_FrameIndex, &frameData, sizeof(FrameData));
     }
 
     // Reset command allocator and command list
@@ -50,12 +46,31 @@ void MeshTestSimulation::PopulateCommandList()
         m_CommandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
     }
 
+    // Set viewport and scissor rect
+    {
+        D3D12_VIEWPORT viewport = {};
+        viewport.TopLeftX = 0.0f;
+        viewport.TopLeftY = 0.0f;
+        viewport.Width = static_cast<float>(m_RenderTargets[m_FrameIndex]->GetDesc().Width);
+        viewport.Height = static_cast<float>(m_RenderTargets[m_FrameIndex]->GetDesc().Height);
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        m_CommandList->RSSetViewports(1, &viewport);
+
+        D3D12_RECT scissorRect = {};
+        scissorRect.left = 0;
+        scissorRect.top = 0;
+        scissorRect.right = static_cast<LONG>(viewport.Width);
+        scissorRect.bottom = static_cast<LONG>(viewport.Height);
+        m_CommandList->RSSetScissorRects(1, &scissorRect);
+    }
+
     // Draw mesh
     {
         m_MeshPipeline->Bind(m_CommandList.Get());
 
         // Set frame data constant buffer (b0)
-        m_CommandList->SetGraphicsRootConstantBufferView(0, m_FrameData->GetGPUVirtualAddress());
+        m_CommandList->SetGraphicsRootConstantBufferView(0, m_FrameData->GetGPUVirtualAddress() + m_FrameDataSize * m_FrameIndex);
 
         m_Object->Draw(m_CommandList.Get());
     }
@@ -71,13 +86,26 @@ void MeshTestSimulation::PopulateCommandList()
     m_CommandList->Close();
 }
 
+void MeshTestSimulation::PostResize()
+{
+    if (m_Camera)
+    {
+        D3D12_RESOURCE_DESC renderDesc = m_RenderTargets[0]->GetDesc();
+        float aspectRatio = static_cast<float>(renderDesc.Width) / static_cast<float>(renderDesc.Height);
+        m_Camera->SetPerspective(m_FovHorizontal, aspectRatio, 0.1f, 100.0f);
+    }
+}
+
 void MeshTestSimulation::PostInit()
 {
     // Create camera
-    m_Camera = MakeUnique<Camera>();
-    m_Camera->SetPosition({ 0.0f, 0.0f, -30.0f });
-    m_Camera->SetPerspective(90.0f, 16.0f / 9.0f, 0.1f, 100.0f);
-
+    {
+        m_Camera = MakeUnique<Camera>();
+        m_Camera->SetPosition(float3{ 0.0f, 0.0f, -5.0f});
+        D3D12_RESOURCE_DESC renderDesc = m_RenderTargets[0]->GetDesc();
+        float aspectRatio = static_cast<float>(renderDesc.Width) / static_cast<float>(renderDesc.Height);
+        m_Camera->SetPerspective(m_FovHorizontal, aspectRatio, 0.1f, 100.0f);
+    }
 
     // Create sphere
     {
@@ -92,7 +120,8 @@ void MeshTestSimulation::PostInit()
         m_MeshPipeline = MakeShared<MeshPipeline>();
         m_MeshPipeline->Initialize(m_Device.Get(), renderDesc.Format, depthDesc.Format);
 
-        SharedPtr<Mesh> mesh = MakeShared<Mesh>(CreateSphereMesh(), m_Device.Get());
+        MeshTemplate meshTemplate = CreateSphereMesh(1);
+        SharedPtr<Mesh> mesh = MakeShared<Mesh>(meshTemplate, m_Device.Get());
         m_Object->SetMesh(mesh);
     }
 
@@ -104,10 +133,12 @@ void MeshTestSimulation::PostInit()
         heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
         heapProps.CreationNodeMask = 1;
         heapProps.VisibleNodeMask = 1;
+
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = sizeof(FrameData);
+        m_FrameDataSize = AlignUp(sizeof(FrameData), 256);
+        resourceDesc.Width = m_FrameDataSize * Simulation::s_FrameCount;
         resourceDesc.Height = 1;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = 1;
@@ -126,5 +157,32 @@ void MeshTestSimulation::PostInit()
 
         if (FAILED(hr))
             throw std::runtime_error("Failed to create frame data buffer");
+
+        // Map the buffer
+        if (FAILED(m_FrameData->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedFrameData))))
+            throw std::runtime_error("Failed to map frame data buffer");
+    }
+}
+
+void MeshTestSimulation::PreRelease()
+{
+    if (m_FrameData)
+    {
+        m_FrameData->Unmap(0, nullptr);
+        m_MappedFrameData = nullptr;
+        m_FrameData.Reset();
+    }
+    if (m_Object)
+    {
+        m_Object->Release();
+        m_Object.reset();
+    }
+    if (m_MeshPipeline)
+    {
+        m_MeshPipeline.reset();
+    }
+    if (m_Camera)
+    {
+        m_Camera.reset();
     }
 }

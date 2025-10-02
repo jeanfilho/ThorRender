@@ -13,7 +13,7 @@
 class Simulation
 {
 public:
-    static constexpr uint FrameCount = 2;
+    static constexpr uint s_FrameCount = 2;
 
 public:
     Simulation();
@@ -28,6 +28,7 @@ protected:
     virtual void PopulateCommandList() = 0;
     virtual void PostInit() {};
     virtual void PreRelease() {};
+    virtual void PostResize() {};
     void WaitForPreviousFrame();
     void InitD3D12(const uint width, const uint height, const HWND hwnd);
 
@@ -37,9 +38,11 @@ protected:
     ComPtr<ID3D12CommandQueue> m_CommandQueue;
     ComPtr<ID3D12DescriptorHeap> m_RtvHeap;
     ComPtr<ID3D12DescriptorHeap> m_DsvHeap;
-    ComPtr<ID3D12Resource> m_RenderTargets[FrameCount];
-    ComPtr<ID3D12Resource> m_DepthBuffers[FrameCount];
-    ComPtr<ID3D12CommandAllocator> m_CommandAllocator[FrameCount];
+    ComPtr<ID3D12DescriptorHeap> m_CbvUavSrvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_SamplerHeap;
+    ComPtr<ID3D12Resource> m_RenderTargets[s_FrameCount];
+    ComPtr<ID3D12Resource> m_DepthBuffers[s_FrameCount];
+    ComPtr<ID3D12CommandAllocator> m_CommandAllocator[s_FrameCount];
     ComPtr<ID3D12GraphicsCommandList> m_CommandList;
     uint m_RtvDescriptorSize;
     uint m_DsvDescriptorSize;
@@ -47,7 +50,7 @@ protected:
 
     // Fence objects
     ComPtr<ID3D12Fence> m_Fence;
-    uint64 m_FenceValue[FrameCount];
+    uint64 m_FenceValue[s_FrameCount];
     HANDLE m_FenceEvent;
 
 #ifdef _DEBUG

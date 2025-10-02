@@ -25,16 +25,19 @@ public:
     void SetMesh(SharedPtr<Mesh> mesh) { m_Mesh = mesh; }
 
     void Initialize(ID3D12Device* device);
+    void Release();
     void Draw(ID3D12GraphicsCommandList* commandList);
+
+    void UpdateWorldMatrix();
 
 private:
     void UpdateConstantBuffer();
-    void UpdateWorldMatrix();
 
     // Object transformation data matching ObjectData cbuffer in shader
     struct ObjectData
     {
         float4x4 Model;
+        float4x4 Normal;
         float2 UvOffset;
         float2 UvScale;
     };
@@ -43,7 +46,8 @@ private:
     float3 m_Position = {0.0f, 0.0f, 0.0f};
     float3 m_Rotation = {0.0f, 0.0f, 0.0f}; // In radians
     float3 m_Scale = {1.0f, 1.0f, 1.0f};
-    float4x4 m_WorldMatrix;
+    float4x4 m_WorldMatrix = {};
+    float4x4 m_NormalMatrix = {};
     
     float2 m_UvOffset = {0.0f, 0.0f};
     float2 m_UvScale = {1.0f, 1.0f};
@@ -51,7 +55,12 @@ private:
     SharedPtr<Mesh> m_Mesh;
     
     // D3D12 constant buffer
-    ComPtr<ID3D12Resource> m_ObjectDataBuffer;
-    bool m_ConstantBufferDirty = true;
+    ComPtr<ID3D12Resource> m_ObjectDataBuffer = nullptr;
+    size_t m_ObjectDataBufferSize = 0;
+    uint8* m_MappedObjectData = nullptr;
+
+    int m_CurrentFrameIndex = 0;
+
+    int m_ConstantBufferDirty = 2;
 };
 

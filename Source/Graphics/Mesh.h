@@ -5,6 +5,7 @@
 #include <d3d12.h>
 
 #include "Engine/BaseTypes.h"
+#include "Graphics/Material.h"
 
 // Vertex: position + normal + uv
 struct MeshVertex
@@ -12,24 +13,6 @@ struct MeshVertex
     float3 Position;
     float3 Normal;
     float2 Uv;
-};
-
-// Material: BRDF parameters + texture resource handles
-class Material
-{
-public:
-    float3 Albedo = { 0,0,0 };
-    float Metallic = 0;
-    float Roughness = 0;
-
-    // Texture resource handles
-    ComPtr<ID3D12Resource> AlbedoRoughnessMap = nullptr;
-    ComPtr<ID3D12Resource> NormalMap = nullptr;
-    ComPtr<ID3D12Resource> MetallicMap = nullptr;
-    ComPtr<ID3D12Resource> RoughnessMap = nullptr;
-
-    float2 UvOffset = { 0.0f, 0.0f };
-    float2 UvScale = { 1.0f, 1.0f };
 };
 
 class MeshTemplate
@@ -56,9 +39,10 @@ public:
 
     const Vector<MeshVertex>& GetVertices() const { return m_Vertices; }
     const Vector<uint32>& GetIndices() const { return m_Indices; }
-    const Material& GetMaterial() const { return m_Material; }
     size_t GetVertexCount() const { return m_Vertices.size(); }
     size_t GetIndexCount() const { return m_Indices.size(); }
+    const Material& GetMaterial() const { return m_Material; }
+
 
 private:
     Vector<MeshVertex> m_Vertices;

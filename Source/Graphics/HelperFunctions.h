@@ -75,10 +75,10 @@ inline MeshTemplate CreateCubeMesh(float size = 1.0f)
     return cube;
 }
 
-MeshTemplate CreateSphereMesh(float radius = 1.0f, uint32 latitudeSegments = 10, uint32 longitudeSegments = 10)
+MeshTemplate CreateSphereMesh(float radius = 1.0f, uint32 latitudeSegments = 16, uint32 longitudeSegments = 16)
 {
     MeshTemplate mesh;
-    for (uint32 lat = 1; lat <= latitudeSegments; ++lat)
+    for (uint32 lat = 0; lat <= latitudeSegments; ++lat)
     {
         float theta = PI * lat / latitudeSegments;
         float sinTheta = Sin(theta);
@@ -91,7 +91,7 @@ MeshTemplate CreateSphereMesh(float radius = 1.0f, uint32 latitudeSegments = 10,
 
             MeshVertex vertex;
             vertex.Position = { radius * sinTheta * cosPhi, radius * cosTheta, radius * sinTheta * sinPhi };
-            vertex.Normal = { sinTheta * cosPhi, cosTheta, sinTheta * sinPhi };
+            vertex.Normal = Normalize(float3{ sinTheta * cosPhi, cosTheta, sinTheta * sinPhi });
             vertex.Uv = { 1.0f - (float)lon / longitudeSegments, 1.0f - (float)lat / latitudeSegments };
             mesh.AddVertex(vertex);
         }
@@ -102,33 +102,10 @@ MeshTemplate CreateSphereMesh(float radius = 1.0f, uint32 latitudeSegments = 10,
         {
             uint32 first = (lat * (longitudeSegments + 1)) + lon;
             uint32 second = first + longitudeSegments + 1;
-            mesh.AddTriangle(first, second, first + 1);
-            mesh.AddTriangle(second, second + 1, first + 1);
+            
+            mesh.AddTriangle(first, first + 1, second);
+            mesh.AddTriangle(second, first + 1, second + 1);
         }
     }
     return mesh;
-}
-
-inline XMMATRIX GetViewMatrix(const float3& position, const float3& target, const float3& up)
-{
-    return XMMatrixLookAtLH(
-        XMLoadFloat3(&position),
-        XMLoadFloat3(&target),
-        XMLoadFloat3(&up)
-    );
-}
-
-inline XMMATRIX GetViewMatrix(const Camera& camera)
-{
-    return GetViewMatrix(camera.GetPosition(), camera.GetTarget(), camera.GetUp());
-}
-
-inline XMMATRIX GetProjectionMatrix(float fovY, float aspect, float nearZ, float farZ)
-{
-    return XMMatrixPerspectiveFovLH(fovY, aspect, nearZ, farZ);
-}
-
-inline XMMATRIX GetProjectionMatrix(const Camera& camera)
-{
-    return GetProjectionMatrix(camera.GetFovY(), camera.GetAspect(), camera.GetNearZ(), camera.GetFarZ());
 }

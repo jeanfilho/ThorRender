@@ -2,6 +2,7 @@
 #include "../Graphics/Mesh.h"
 #include "directx/d3dx12.h"
 #include <stdexcept>
+#include "Simulation.h"
 
 void Object::SetPosition(const float3& position)
 {
@@ -24,13 +25,13 @@ void Object::SetScale(const float3& scale)
 void Object::SetUvOffset(const float2& uvOffset)
 {
     m_UvOffset = uvOffset;
-    m_ConstantBufferDirty = true;
+    m_ConstantBufferDirty = 2;
 }
 
 void Object::SetUvScale(const float2& uvScale)
 {
     m_UvScale = uvScale;
-    m_ConstantBufferDirty = true;
+    m_ConstantBufferDirty = 2;
 }
 
 void Object::Initialize(ID3D12Device* device)
@@ -46,7 +47,8 @@ void Object::Initialize(ID3D12Device* device)
     D3D12_RESOURCE_DESC resourceDesc = {};
     resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
     resourceDesc.Alignment = 0;
-    resourceDesc.Width = sizeof(ObjectData);
+    m_ObjectDataBufferSize = AlignUp(sizeof(ObjectData), 256);
+    resourceDesc.Width = m_ObjectDataBufferSize * Simulation::s_FrameCount;
     resourceDesc.Height = 1;
     resourceDesc.DepthOrArraySize = 1;
     resourceDesc.MipLevels = 1;
@@ -56,48 +58,61 @@ void Object::Initialize(ID3D12Device* device)
     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-    HRESULT hr = device->CreateCommittedResource(
+
+    if (FAILED(device->CreateCommittedResource(
         &heapProps,
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
-        IID_PPV_ARGS(&m_ObjectDataBuffer));
-
-    if (FAILED(hr))
+        IID_PPV_ARGS(&m_ObjectDataBuffer))))
     {
         throw std::runtime_error("Failed to create object constant buffer");
     }
 
-    m_ConstantBufferDirty = true;
+
+    // Map the buffer and keep it mapped for the lifetime of the resource
+    if (FAILED(m_ObjectDataBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_MappedObjectData))))
+    {
+        throw std::runtime_error("Failed to map object data buffer");
+    }
+
+    UpdateWorldMatrix();
+
+    m_ConstantBufferDirty = 2;
+}
+
+void Object::Release()
+{
+    if (m_ObjectDataBuffer)
+    {
+        m_ObjectDataBuffer->Unmap(0, nullptr);
+        m_MappedObjectData = nullptr;
+        m_ObjectDataBuffer.Reset();
+    }
+    m_Mesh.reset();
 }
 
 void Object::UpdateConstantBuffer()
 {
-    if (!m_ObjectDataBuffer || !m_ConstantBufferDirty)
+    if (!m_ObjectDataBuffer || m_ConstantBufferDirty == 0)
     {
         return;
     }
 
     // Prepare object data
-    ObjectData objectData;
+    ObjectData objectData{};
     objectData.Model = m_WorldMatrix;
     objectData.UvOffset = m_UvOffset;
     objectData.UvScale = m_UvScale;
+    objectData.Normal = m_NormalMatrix;
 
-    // Map and copy data to the buffer
-    void* pData;
-    CD3DX12_RANGE readRange(0, 0); // We do not intend to read from this resource on the CPU.
-    HRESULT hr = m_ObjectDataBuffer->Map(0, &readRange, &pData);
-    if (FAILED(hr))
-    {
-        throw std::runtime_error("Failed to map object data buffer");
-    }
+    // Copy data to the buffer
+    static constexpr size_t dataSize = sizeof(ObjectData);
+    size_t offset = m_CurrentFrameIndex * m_ObjectDataBufferSize;
+    memcpy(m_MappedObjectData + offset, &objectData, dataSize);
 
-    memcpy(pData, &objectData, sizeof(ObjectData));
-    m_ObjectDataBuffer->Unmap(0, nullptr);
-
-    m_ConstantBufferDirty = false;
+    m_ConstantBufferDirty--;
 }
 
 void Object::UpdateWorldMatrix()
@@ -107,24 +122,38 @@ void Object::UpdateWorldMatrix()
     XMMATRIX rotation = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
     XMMATRIX scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
 
-    // Combine transformations in SRT order (Scale * Rotation * Translation)
+    // Combine transformations in SRT order
     XMMATRIX worldMatrix = scale * rotation * translation;
 
-    // Store the result (transpose for HLSL column-major format)
+    // Remove the transpose here - let the shader handle it
     XMStoreFloat4x4(&m_WorldMatrix, XMMatrixTranspose(worldMatrix));
 
-    m_ConstantBufferDirty = true;
+    // Compute normal matrix: inverse transpose of the 3x3 part (no extra transpose needed)
+    XMMATRIX upperLeft3x3 = XMMatrixSet(
+        XMVectorGetX(worldMatrix.r[0]), XMVectorGetY(worldMatrix.r[0]), XMVectorGetZ(worldMatrix.r[0]), 0,
+        XMVectorGetX(worldMatrix.r[1]), XMVectorGetY(worldMatrix.r[1]), XMVectorGetZ(worldMatrix.r[1]), 0,
+        XMVectorGetX(worldMatrix.r[2]), XMVectorGetY(worldMatrix.r[2]), XMVectorGetZ(worldMatrix.r[2]), 0,
+        0, 0, 0, 1
+    );
+    
+    XMMATRIX normalMatrix = XMMatrixInverse(nullptr, upperLeft3x3);
+    XMStoreFloat4x4(&m_NormalMatrix, normalMatrix);
+
+    m_ConstantBufferDirty = 2;
 }
 
 void Object::Draw(ID3D12GraphicsCommandList* commandList)
 {
     if (m_Mesh && m_ObjectDataBuffer)
     {
+        // Advance to the next frame index
+        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % Simulation::s_FrameCount;
+
         // Update constant buffer if needed
         UpdateConstantBuffer();
 
-        // Set the object constant buffer (ObjectData at register b1)
-        commandList->SetGraphicsRootConstantBufferView(1, m_ObjectDataBuffer->GetGPUVirtualAddress());
+        D3D12_GPU_VIRTUAL_ADDRESS bufferAddress = m_ObjectDataBuffer->GetGPUVirtualAddress() + m_CurrentFrameIndex * m_ObjectDataBufferSize;
+        commandList->SetGraphicsRootConstantBufferView(1, bufferAddress);
 
         // Draw the mesh
         m_Mesh->Draw(commandList);

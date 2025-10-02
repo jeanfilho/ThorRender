@@ -90,7 +90,11 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
             if (FAILED(hr))
                 throw std::runtime_error("Failed to map frame data buffer");
             Material material = meshTemplate.GetMaterial();
-            memcpy(pData, &material, sizeof(Material));
+            MaterialData materialData{};
+            materialData.Albedo = material.Albedo;
+            materialData.Metallic = material.Metallic;
+            materialData.Roughness = material.Roughness;
+            memcpy(pData, &materialData, sizeof(MaterialData));
             m_MaterialBuffer->Unmap(0, nullptr);
         }
     }
@@ -98,7 +102,7 @@ Mesh::Mesh(const MeshTemplate& meshTemplate, ID3D12Device* device)
 
 void Mesh::Draw(ID3D12GraphicsCommandList* commandList) const
 {
-    commandList->SetGraphicsRootConstantBufferView(1, m_MaterialBuffer->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(2, m_MaterialBuffer->GetGPUVirtualAddress());
     commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
     commandList->IASetIndexBuffer(&m_IndexBufferView);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

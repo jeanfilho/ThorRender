@@ -614,3 +614,14 @@ inline float Sqrt(float x) noexcept
 {
     return std::sqrt(x);
 }
+
+inline float InvSqrt(float x) noexcept
+{
+    return 1.0f / std::sqrt(x);
+}
+
+// Align 'size' up to the nearest multiple of 'alignment' (which must be a power of two)
+constexpr size_t AlignUp(size_t size, size_t alignment) noexcept
+{
+    return (size + alignment - 1) & ~(alignment - 1);
+}

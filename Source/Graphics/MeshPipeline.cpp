@@ -28,7 +28,7 @@ void MeshPipeline::Bind(ID3D12GraphicsCommandList* commandList) const
 void MeshPipeline::CreateRootSignature(ID3D12Device* device)
 {
     // Root parameters for constant buffers and texture resources
-    CD3DX12_ROOT_PARAMETER1 rootParameters[5] = {};
+    CD3DX12_ROOT_PARAMETER1 rootParameters[3] = {};
 
     // Frame data constant buffer (b0) - used by both vertex and pixel shaders
     rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_ALL);
@@ -36,18 +36,18 @@ void MeshPipeline::CreateRootSignature(ID3D12Device* device)
     // Object data constant buffer (b1) - used by vertex shader
     rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_VERTEX);
 
-    // Material data constant buffer (b1) - used by pixel shader
-    rootParameters[2].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_PIXEL);
+    // Material data constant buffer (b2) - used by pixel shader
+    rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    // Texture descriptor table for material textures (t0-t3)
-    CD3DX12_DESCRIPTOR_RANGE1 textureRange;
-    textureRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-    rootParameters[3].InitAsDescriptorTable(1, &textureRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    //// Texture descriptor table for material textures (t0-t3)
+    //CD3DX12_DESCRIPTOR_RANGE1 textureRange;
+    //textureRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+    //rootParameters[3].InitAsDescriptorTable(1, &textureRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    // Sampler descriptor table (s0)
-    CD3DX12_DESCRIPTOR_RANGE1 samplerRange;
-    samplerRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
-    rootParameters[4].InitAsDescriptorTable(1, &samplerRange, D3D12_SHADER_VISIBILITY_PIXEL);
+    //// Sampler descriptor table (s0)
+    //CD3DX12_DESCRIPTOR_RANGE1 samplerRange;
+    //samplerRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+    //rootParameters[4].InitAsDescriptorTable(1, &samplerRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
     // Create versioned root signature
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
